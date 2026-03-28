@@ -1,6 +1,8 @@
 import { useVisibility } from '@/context/VisibilityContext';
-import { Eye, EyeOff, Bell, Save } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Eye, EyeOff, Bell, Save, Zap } from 'lucide-react';
 import { useState } from 'react';
+import axios from 'axios';
 
 interface ToggleRowProps {
   label: string;
@@ -35,7 +37,33 @@ function ToggleRow({ label, description, value, onChange }: ToggleRowProps) {
 
 export default function AdminSettings() {
   const { config, updateConfig, updateNotifications } = useVisibility();
+  const { user } = useAuth();
   const [saved, setSaved] = useState(false);
+
+  // Bolt Fleet credentials
+  const [boltClientId, setBoltClientId] = useState('');
+  const [boltClientSecret, setBoltClientSecret] = useState('');
+  const [boltSaving, setBoltSaving] = useState(false);
+  const [boltStatus, setBoltStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+
+  const handleBoltSave = async () => {
+    if (!boltClientId || !boltClientSecret) return;
+    setBoltSaving(true);
+    setBoltStatus('idle');
+    try {
+      await axios.post('/api/bolt/credentials', {
+        tenantId: user?.tenantId,
+        clientId: boltClientId,
+        clientSecret: boltClientSecret,
+      });
+      setBoltStatus('saved');
+      setTimeout(() => setBoltStatus('idle'), 3000);
+    } catch {
+      setBoltStatus('error');
+    } finally {
+      setBoltSaving(false);
+    }
+  };
 
   const handleSave = () => {
     setSaved(true);
@@ -129,6 +157,61 @@ export default function AdminSettings() {
           value={notif.smsOnPaymentDue}
           onChange={v => updateNotifications({ smsOnPaymentDue: v })}
         />
+      </div>
+
+      {/* Bolt Fleet Integration */}
+      <div className="bg-surface-800 border border-surface-600 rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Zap size={16} className="text-brand-400" />
+          <h2 className="font-display text-base font-semibold text-white">Bolt Fleet Integration</h2>
+        </div>
+        <p className="text-xs text-surface-400 font-body mb-4">
+          Connect your Bolt Fleet account to automatically fetch driver earnings (gross &amp; net).
+          Get your credentials from{' '}
+          <a href="https://fleets.bolt.eu" target="_blank" rel="noopener noreferrer" className="text-brand-400 underline">
+            fleets.bolt.eu
+          </a>.
+        </p>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-body text-surface-300 mb-1">Client ID</label>
+            <input
+              type="text"
+              value={boltClientId}
+              onChange={e => setBoltClientId(e.target.value)}
+              placeholder="Enter Bolt Fleet Client ID"
+              className="w-full bg-surface-900 border border-surface-600 rounded-lg px-3 py-2 text-sm font-body text-white placeholder-surface-500 focus:outline-none focus:border-brand-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-body text-surface-300 mb-1">Client Secret</label>
+            <input
+              type="password"
+              value={boltClientSecret}
+              onChange={e => setBoltClientSecret(e.target.value)}
+              placeholder="Enter Bolt Fleet Client Secret"
+              className="w-full bg-surface-900 border border-surface-600 rounded-lg px-3 py-2 text-sm font-body text-white placeholder-surface-500 focus:outline-none focus:border-brand-500"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 mt-4">
+          <button
+            onClick={handleBoltSave}
+            disabled={boltSaving || !boltClientId || !boltClientSecret}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-body font-semibold bg-brand-500 hover:bg-brand-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            <Save size={14} />
+            {boltSaving ? 'Saving...' : 'Connect Bolt Fleet'}
+          </button>
+          {boltStatus === 'saved' && (
+            <span className="text-xs font-body text-emerald-400">Connected successfully!</span>
+          )}
+          {boltStatus === 'error' && (
+            <span className="text-xs font-body text-red-400">Connection failed. Check your credentials.</span>
+          )}
+        </div>
       </div>
 
       <button

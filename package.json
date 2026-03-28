@@ -2,13 +2,15 @@
   "name": "drivelink-saas",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node --watch server.js & vite",
+    "dev:client": "vite",
+    "dev:server": "node --watch server.js",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-     "start": "node server.js",
-     "dev": "node --watch server.js"
+    "start": "node server.js",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
     "react": "^18.2.0",
